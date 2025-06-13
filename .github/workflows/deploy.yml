@@ -1,13 +1,12 @@
-name: Build & Deploy Django App
+name: Build and Deploy Django App
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:  # Enables manual trigger from GitHub UI
 
 jobs:
   build-test-push:
-    runs-on: ubuntu-latest
-
     permissions:
       id-token: write   # 👈 required for OIDC
       contents: read
@@ -38,9 +37,12 @@ jobs:
           docker tag ${{ vars.ECR_REPOSITORY }}:latest ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:latest
           docker push ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:latest
 
-jobs:
+
   deploy:
+    name: Deploy to EC2
     runs-on: ubuntu-latest
+    needs: build-test-push
+    if: github.event_name == 'workflow_dispatch'  # Only allow manual triggers
 
     steps:
     - name: Checkout code
@@ -50,7 +52,7 @@ jobs:
       uses: aws-actions/configure-aws-credentials@v3
       with:
         role-to-assume: ${{ vars.OIDC_ROLE_TO_ASSUME }}
-        aws-region: us-east-1
+        aws-region: ${{ vars.AWS_REGION }}
 
     - name: Log in to Amazon ECR
       uses: aws-actions/amazon-ecr-login@v1
