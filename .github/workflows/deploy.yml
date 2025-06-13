@@ -24,6 +24,7 @@ jobs:
           role-to-assume: ${{ vars.OIDC_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.AWS_REGION }}  
 
+      # test step to add later
       # - name: Run tests (Django)
       #   run: |
       #     docker run --rm ${{ secrets.ECR_REPOSITORY }} python manage.py test
