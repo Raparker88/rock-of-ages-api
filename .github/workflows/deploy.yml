@@ -1,0 +1,86 @@
+name: Build & Deploy Django App
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-test-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write   # 👈 required for OIDC
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS OIDC credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ vars.OIDC_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}  
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.ECR_REPOSITORY }} .
+
+      # - name: Run tests (Django)
+      #   run: |
+      #     docker run --rm ${{ secrets.ECR_REPOSITORY }} python manage.py test
+
+      - name: Tag and push image to ECR
+        run: |
+          docker tag ${{ vars.ECR_REPOSITORY }}:latest ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:latest
+          docker push ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:latest
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials using OIDC
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        role-to-assume: ${{ vars.OIDC_ROLE_TO_ASSUME }}
+        aws-region: us-east-1
+
+    - name: Log in to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build Docker image
+      run: |
+        docker build -t ${{ vars.ECR_REPOSITORY }} .
+
+    - name: Tag and push image to ECR
+      run: |
+        IMAGE_URI=${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:latest
+        docker tag ${{ vars.ECR_REPOSITORY }}:latest $IMAGE_URI
+        docker push $IMAGE_URI
+
+    - name: Trigger remote deployment on EC2 via SSM
+      run: |
+        aws ssm send-command \
+          --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
+          --document-name "AWS-RunShellScript" \
+          --comment "Deploy updated Docker image" \
+          --parameters commands='
+            IMAGE="${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:latest"
+            docker pull "$IMAGE"
+            if [ $? -eq 0 ]; then
+              docker stop my-app || true
+              docker rm my-app || true
+              docker run -d --name my-app -p 80:8000 "$IMAGE"
+            else
+              echo "Docker pull failed. Aborting deployment."
+              exit 1
+            fi
+          ' \
+          --region ${{ vars.AWS_REGION }}
