@@ -5,14 +5,18 @@ on:
     branches: [main]
   workflow_dispatch:  # Enables manual trigger from GitHub UI
 
+permissions:
+  id-token: write       # Required for GitHub OIDC to work
+  contents: read        # Required to checkout code
+
 jobs:
   build-test-push:
-    permissions:
-      id-token: write   # 👈 required for OIDC
-      contents: read
+    name: Build & Push to ECR
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Configure AWS OIDC credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -20,22 +24,18 @@ jobs:
           role-to-assume: ${{ vars.OIDC_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.AWS_REGION }}  
 
-      - name: Log in to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Build Docker image
-        run: |
-          docker build -t ${{ secrets.ECR_REPOSITORY }} .
-
       # - name: Run tests (Django)
       #   run: |
       #     docker run --rm ${{ secrets.ECR_REPOSITORY }} python manage.py test
 
-      - name: Tag and push image to ECR
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
         run: |
-          docker tag ${{ vars.ECR_REPOSITORY }}:latest ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:latest
-          docker push ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:latest
+          IMAGE="${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:latest"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
 
 
   deploy:
