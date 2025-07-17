@@ -20,7 +20,7 @@ RUN pip install --upgrade pip && \
   pip install pipenv
 
 # Copy Pipfile and Pipfile.lock
-COPY Pipfile* /app/
+COPY Pipfile Pipfile.lock /app/
 
 # Install dependencies globally
 RUN pipenv install --deploy --system
