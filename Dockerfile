@@ -22,8 +22,8 @@ RUN pip install --upgrade pip && \
 # Copy Pipfile and Pipfile.lock
 COPY Pipfile* /app/
 
-# Install dependencies in a virtual environment
-RUN pipenv install
+# Install dependencies globally
+RUN pipenv install --deploy --system
 
 # Copy project files
 COPY . /app/
@@ -34,5 +34,5 @@ RUN chmod +x /app/seed_database.sh
 # Expose port
 EXPOSE 8000
 
-# Command to run scripts using the pipenv environment
-CMD pipenv run bash -c "./seed_database.sh && python manage.py runserver 0.0.0.0:8000"
+# Command to run scripts 
+CMD bash -c "./seed_database.sh && python manage.py runserver 0.0.0.0:8000"
