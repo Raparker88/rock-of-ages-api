@@ -38,5 +38,4 @@ jobs:
             --region ${{ vars.AWS_REGION }}
 
 
-
            

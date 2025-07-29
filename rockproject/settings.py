@@ -100,13 +100,13 @@ WSGI_APPLICATION = 'rockproject.wsgi.application'
 # Database Configuration for RDS PostgreSQL
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',  # ← Changed from sqlite3
-        'NAME': os.getenv('DB_NAME', 'rockofages'),
-        'USER': os.getenv('DB_USER', 'rockadmin'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT', '5432'),
-        'OPTIONS': {
+    'ENGINE': 'django.db.backends.postgresql',
+    'NAME': os.getenv('DB_NAME', 'rockofages'),
+    'USER': os.getenv('DB_USER', 'rockadmin'),
+    'PASSWORD': os.getenv('DB_PASSWORD'),
+    'HOST': os.getenv('DB_HOST'),
+    'PORT': os.getenv('DB_PORT', '5432'),
+     'OPTIONS': {
             'sslmode': os.environ.get('SSLMODE', 'require'),
         }
     }

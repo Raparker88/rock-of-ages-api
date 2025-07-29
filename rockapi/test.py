@@ -17,4 +17,3 @@ class SanityTests(SimpleTestCase):
         # This won't hit a real view, but it shows test usage
         response = self.client.get('/fake-url')
         self.assertIn(response.status_code, [status.HTTP_404_NOT_FOUND, status.HTTP_200_OK])
-
